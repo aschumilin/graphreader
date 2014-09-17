@@ -20,5 +20,11 @@
 	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jung2-2_0_1/stax-api-1.0.1.jar"/>
 	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jung2-2_0_1/vecmath-1.3.1.jar"/>
 	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jung2-2_0_1/wstx-asl-3.2.6.jar"/>
+	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jdom-2.0.5/jaxen-1.1.6.jar"/>
+	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jdom-2.0.5/xercesImpl.jar"/>
+	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jdom-2.0.5/xml-apis.jar"/>
+	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jdom-2.0.5/jdom-2.0.5.jar"/>
+	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/jdom-2.0.5/jdom-2.0.5-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/pilatus/WORK/pred-clust/graphreader/lib/mongo-java-driver-2.12.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
