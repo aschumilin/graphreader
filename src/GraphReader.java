@@ -43,12 +43,20 @@ import graph.Role;
 
 public class GraphReader {
 	
+	/////////////////////////////////
+	// set this password
+	private static String mongoPass = "";
+	/////////////////////////////////
+	
+	
 	private static String mongoAddr = "172.22.204.184";
 	private static int mongoPort = 22222;
 	private static String mongoDBName = "all";
 	private static String collName = "srl";
-	private static String mongoUser = "atsc";
-	private static String mongoPass = "123";
+	private static String mongoUser = "reader";
+	
+	
+	
 	
 	public static TreeMap<String, List<DirectedSparseGraph<Argument, Role>>> readGraphsFromFile(String fullFilePath){
 		
@@ -149,6 +157,7 @@ public class GraphReader {
 			}
 		}
 	}
+	
 	
 	
 	private static void visualizeGraph(Graph g, String sentence){
