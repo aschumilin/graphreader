@@ -2,12 +2,18 @@ import java.awt.Dimension;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -27,10 +33,12 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.MongoClient;
 
+
+import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.algorithms.layout.CircleLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
-import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.graph.Graph;
+import edu.uci.ics.jung.io.GraphFile;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.control.CrossoverScalingControl;
 import edu.uci.ics.jung.visualization.control.PickingGraphMousePlugin;
@@ -40,6 +48,7 @@ import edu.uci.ics.jung.visualization.control.TranslatingGraphMousePlugin;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import graph.Argument;
 import graph.Role;
+
 
 public class GraphReader {
 	
@@ -56,7 +65,176 @@ public class GraphReader {
 	private static String mongoUser = "reader";
 	
 	
+	public static void main(String[] args) {
+		
+//		readAndVisualizeGraphs("/home/pilatus/Desktop/annot-test/res/en-26221135.graph");
+		
+		GraphReader gr = new GraphReader();
+		TreeMap<String, List<DirectedSparseGraph<Argument, Role>>> tempMap = null;
+		List<DirectedSparseGraph<Argument, Role>> 					tempGList = null;
+		String 														tempUri = null;
+		String 														tempGraphFileName = null;
+		
+		int numGEs=0, numGEn=0; // num graphs counter = num predicates
+		int numNEs=0, numNEn=0; // num nodes counter
+		int numSentEn=0, numSentEs=0;	// num sentences counter
+
+		Counter entsEn = gr.new Counter();
+		Counter entsEs = gr.new Counter();
+		Counter entsAll = gr.new Counter();
+		
+		String baseResultDir = args[0]; // /home/pilatus/Desktop/annot-test/  /home/pilatus/Desktop/annot-test/graphs/
+		File resultEntsEN = new File(baseResultDir + "en-HashMap-String-intArr");
+		File resultEntsES = new File(baseResultDir + "es-HashMap-String-intArr");
+		File resultEntsAll = new File(baseResultDir +"all-HashMap-String-intArr");
+		/*
+		 * my logger
+		 */
+		PrintWriter L = null;
+		try {
+			L = new PrintWriter(new File(baseResultDir + "stats.log"));
+		} catch (IOException e1) {e1.printStackTrace();}
+		
+		
+		String sourceDir = args[1];
+		File graphsDir = new File(sourceDir);
+		
 	
+		
+		
+		long workersStarted = 0;
+		long totalTasks = 361972;
+		long interval = totalTasks / 100; // Schrittweite
+		try{
+			for (File f : graphsDir.listFiles()){
+				
+				// print progress info
+				workersStarted ++;
+				try{
+					if(workersStarted % interval == 0)
+						System.out.println("PROGRESS: " + (100.0 * workersStarted / totalTasks) +  " %");
+				}catch(Exception ae){System.out.println("error in progress printer");}
+				
+				
+				tempGraphFileName = f.getName();
+				tempMap = readGraphsFromFile(f.getAbsolutePath());
+
+				if (tempGraphFileName.startsWith("es")){		// count spanish
+
+					
+					for (String key : tempMap.keySet()){	// iterate over each sentence in map
+						numSentEs ++;
+						
+						tempGList = tempMap.get(key);
+
+						for (DirectedSparseGraph<Argument, Role> g : tempGList){	// iterate over each graph in sentence
+
+							numGEs ++;
+
+							for (Argument arg : g.getVertices()){
+								if(! arg.isPredicate()){
+									numNEs ++;
+									tempUri = arg.getRefs().get(0).getURI();
+									entsEs.add(tempUri);
+									entsAll.add(tempUri);
+								}
+							}
+
+						}
+
+
+					}
+				}else if (tempGraphFileName.startsWith("en")){	// count english
+
+					for (String key : tempMap.keySet()){	// iterate over each sentence in map
+						
+						numSentEn ++;
+						
+						tempGList = tempMap.get(key);
+
+						for (DirectedSparseGraph<Argument, Role> g : tempGList){	// iterate over each graph in sentence
+
+							numGEn ++;
+							for (Argument arg : g.getVertices()){
+								if (!arg.isPredicate()){
+									numNEn ++;
+									tempUri = arg.getRefs().get(0).getURI();
+									entsEn.add(tempUri);
+									entsAll.add(tempUri);
+								}
+							}
+						}
+					}
+				}else{
+					L.println("neither EN, nor ES..??");
+				}
+			}
+		}catch(Exception e){
+			L.println("Error in \t" + tempGraphFileName + "\t :" + e.getMessage());
+		}
+		
+		L.println("num EN sentences: " + numSentEn);		
+		L.println("num EN graphs: " + numGEn);
+		L.println("num EN nodes: " + numNEn);
+
+		L.println("num ES sentences: " + numSentEs);		
+		L.println("num ES graphs: " + numGEs);
+		L.println("num ES nodes: " + numNEs);
+		
+		
+		
+		L.println("distinct EN ents: " + entsEn.getMap().keySet().size());
+		L.println("distinct ES ents: " + entsEs.getMap().keySet().size());
+		L.println("distinct ALL ents: " + entsAll.getMap().keySet().size());
+
+		L.close();
+
+		
+		try {
+			FileOutputStream fos = new FileOutputStream(resultEntsEN);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			
+			oos.writeObject(entsEn.getMap());
+			
+			oos.close();
+			fos.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			FileOutputStream fos = new FileOutputStream(resultEntsES);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			
+			oos.writeObject(entsEs.getMap());
+			
+			oos.close();
+			fos.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			FileOutputStream fos = new FileOutputStream(resultEntsAll);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			
+			oos.writeObject(entsAll.getMap());
+			
+			oos.close();
+			fos.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	public static TreeMap<String, List<DirectedSparseGraph<Argument, Role>>> readGraphsFromFile(String fullFilePath){
 		
@@ -70,7 +248,9 @@ public class GraphReader {
 
 			graphsMap = 
 					(TreeMap<String, List<DirectedSparseGraph<Argument, Role>>>)
-						input.readObject();					
+						input.readObject();	
+			input.close();
+			fis.close();
 		}catch(Exception e){
 			System.out.println("could not deserialize annotations map: ");
 			e.printStackTrace();
@@ -182,5 +362,33 @@ public class GraphReader {
 		frame.getContentPane().add(vv);
 		frame.pack();
 		frame.setVisible(true); 
+	}
+
+
+	private class Counter implements Serializable{
+
+		private static final long serialVersionUID = 1112313123L;
+		HashMap<String, int[]> counter = null;	
+		 	
+		public Counter(){
+			counter = new HashMap<String, int[]>();
+		}
+
+		
+		public HashMap<String, int[]> getMap(){
+			return counter;
+		}
+		
+		public void add(String key){
+
+			int[] valueWrapper = counter.get(key);
+			 
+			if (valueWrapper == null) {
+				counter.put(key, new int[] { 1 });
+			} else {
+				valueWrapper[0]++;
+			}
+			
+		}
 	}
 }
